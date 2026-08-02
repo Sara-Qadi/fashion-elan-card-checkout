@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import CardPaymentForm from '@/components/CardPaymentForm.vue'
@@ -21,12 +21,6 @@ const cardFormRef = ref(null)
 const method = ref(checkout.paymentMethod)
 const cardState = ref({ valid: false, summary: null })
 
-const canContinue = computed(() => {
-  if (method.value === 'cod') return true
-  if (method.value === 'card') return cardState.value.valid
-  return false
-})
-
 watch(method, (value) => {
   if (value === 'cod') {
     checkout.setPaymentMethod('cod', buildSafePaymentSummary({ method: 'cod' }))
@@ -42,6 +36,19 @@ function onCardChange(state) {
   if (method.value === 'card') checkout.setPaymentMethod('card', state.summary)
 }
 
+/** Brings the first offending card field into view. */
+async function revealFirstError() {
+  await nextTick()
+  const field = document.querySelector('.elan-card-form .v-input--error')
+  if (!field) return
+  field.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  field.querySelector('input')?.focus({ preventScroll: true })
+}
+
+/**
+ * The button stays enabled on purpose: a disabled button that does nothing
+ * gives the shopper no idea what is missing.
+ */
 function reviewOrder() {
   if (!method.value) {
     error('Choose a payment method to continue.')
@@ -51,6 +58,7 @@ function reviewOrder() {
   if (method.value === 'card' && !cardState.value.valid) {
     cardFormRef.value?.touchAll()
     error('Please check your card details — try 4242 4242 4242 4242.')
+    revealFirstError()
     return
   }
 
@@ -125,7 +133,6 @@ function reviewOrder() {
             color="primary"
             class="elan-cta px-8"
             append-icon="mdi-arrow-right"
-            :disabled="!canContinue"
             @click="reviewOrder"
           >
             Review Order

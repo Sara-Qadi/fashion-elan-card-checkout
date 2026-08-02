@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import { buildSafePaymentSummary } from '@/utils/order'
 import {
@@ -27,6 +27,7 @@ import {
 
 const emit = defineEmits(['change'])
 
+const formRef = ref(null)
 const cardName = ref('')
 const cardNumber = ref('')
 const expiry = ref('')
@@ -73,11 +74,17 @@ function markTouched(field) {
   touched.value[field] = true
 }
 
-/** Exposed so the parent can force-show every error when the user tries to continue. */
-function touchAll() {
+/**
+ * Exposed so the parent can force-show every error when the shopper tries to
+ * continue. Flipping `touched` only unlocks the rules — the surrounding form
+ * still has to re-run them for the messages to appear.
+ */
+async function touchAll() {
   Object.keys(touched.value).forEach((field) => {
     touched.value[field] = true
   })
+  await nextTick()
+  await formRef.value?.validate()
 }
 
 defineExpose({ touchAll })
@@ -115,61 +122,69 @@ watch(
       </span>
     </v-alert>
 
-    <v-row dense>
-      <v-col cols="12">
-        <v-text-field
-          v-model="cardName"
-          label="Name on card *"
-          autocomplete="off"
-          :rules="rulesFor('cardName')"
-          @blur="markTouched('cardName')"
-        />
-      </v-col>
+    <v-form ref="formRef" @submit.prevent>
+      <v-row dense>
+        <v-col cols="12">
+          <v-text-field
+            v-model="cardName"
+            label="Name on card *"
+            autocomplete="off"
+            :rules="rulesFor('cardName')"
+            @blur="markTouched('cardName')"
+          />
+        </v-col>
 
-      <v-col cols="12">
-        <v-text-field
-          v-model="cardNumber"
-          label="Card number *"
-          inputmode="numeric"
-          placeholder="4242 4242 4242 4242"
-          autocomplete="off"
-          :rules="rulesFor('cardNumber')"
-          @blur="markTouched('cardNumber')"
-        >
-          <template #append-inner>
-            <v-chip v-if="showBrand" size="x-small" color="primary" variant="tonal" class="font-weight-bold">
-              {{ brandLabel }}
-            </v-chip>
-            <v-icon v-else icon="mdi-credit-card-outline" size="20" color="medium-emphasis" />
-          </template>
-        </v-text-field>
-      </v-col>
+        <v-col cols="12">
+          <v-text-field
+            v-model="cardNumber"
+            label="Card number *"
+            inputmode="numeric"
+            placeholder="4242 4242 4242 4242"
+            autocomplete="off"
+            :rules="rulesFor('cardNumber')"
+            @blur="markTouched('cardNumber')"
+          >
+            <template #append-inner>
+              <v-chip
+                v-if="showBrand"
+                size="x-small"
+                color="primary"
+                variant="tonal"
+                class="font-weight-bold"
+              >
+                {{ brandLabel }}
+              </v-chip>
+              <v-icon v-else icon="mdi-credit-card-outline" size="20" color="medium-emphasis" />
+            </template>
+          </v-text-field>
+        </v-col>
 
-      <v-col cols="6">
-        <v-text-field
-          v-model="expiry"
-          label="Expiry (MM/YY) *"
-          inputmode="numeric"
-          placeholder="09/29"
-          autocomplete="off"
-          :rules="rulesFor('expiry')"
-          @blur="markTouched('expiry')"
-        />
-      </v-col>
+        <v-col cols="6">
+          <v-text-field
+            v-model="expiry"
+            label="Expiry (MM/YY) *"
+            inputmode="numeric"
+            placeholder="09/29"
+            autocomplete="off"
+            :rules="rulesFor('expiry')"
+            @blur="markTouched('expiry')"
+          />
+        </v-col>
 
-      <v-col cols="6">
-        <v-text-field
-          v-model="cvv"
-          label="CVV *"
-          type="password"
-          inputmode="numeric"
-          :placeholder="'•'.repeat(cvvLength)"
-          autocomplete="off"
-          :rules="rulesFor('cvv')"
-          @blur="markTouched('cvv')"
-        />
-      </v-col>
-    </v-row>
+        <v-col cols="6">
+          <v-text-field
+            v-model="cvv"
+            label="CVV *"
+            type="password"
+            inputmode="numeric"
+            :placeholder="'•'.repeat(cvvLength)"
+            autocomplete="off"
+            :rules="rulesFor('cvv')"
+            @blur="markTouched('cvv')"
+          />
+        </v-col>
+      </v-row>
+    </v-form>
 
     <p class="elan-card-form__note mb-0">
       <v-icon icon="mdi-shield-lock-outline" size="15" />

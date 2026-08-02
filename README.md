@@ -424,17 +424,18 @@ Replace these placeholders with your own captures (put the files in `docs/screen
 4. Apply `ELAN10` (or `elan10`) — discount `−$43.30`, tax `$19.49`, total `$409.19`
 5. Try applying `ELAN10` twice — blocked with an explanation
 6. Empty the bag — empty state appears; `/checkout/shipping` redirects back to `/cart`
-7. Submit the shipping form empty — eight inline errors, navigation blocked
+7. Submit the shipping form empty — a summary alert lists every missing field, inline errors appear, navigation blocked
 8. Enter an invalid email/phone — format errors appear
-9. Complete valid details, choose Standard, continue
-10. Enter an invalid card — Luhn/expiry/CVV errors, **Review Order** stays disabled
-11. Enter `4242 4242 4242 4242` — Visa badge appears, button enables
-12. Review the order, use **Edit** to return to shipping, come back
-13. Tick the confirmation checkbox and press **Place Order** — loading state, then confirmation
-14. Refresh `/order-confirmation` — the order is still there
-15. Clear `localStorage` and open `/order-confirmation` — friendly "no order" state, no crash
-16. Repeat with **Cash on Delivery** — card fields hidden, no card validation
-17. Resize to a phone width — single column, no horizontal scrolling
+9. Leave **Country** unselected and press Continue — the alert names it and scrolls it into view
+10. Complete valid details, choose Standard, continue
+11. Press **Review Order** with an empty/invalid card — Luhn/expiry/CVV errors appear and progress is blocked
+12. Enter `4242 4242 4242 4242` — Visa badge appears and the step continues
+13. Review the order, use **Edit** to return to shipping, come back
+14. Tick the confirmation checkbox and press **Place Order** — loading state, then confirmation
+15. Refresh `/order-confirmation` — the order is still there
+16. Clear `localStorage` and open `/order-confirmation` — friendly "no order" state, no crash
+17. Repeat with **Cash on Delivery** — card fields hidden, no card validation
+18. Resize to a phone width — single column, no horizontal scrolling
 
 ## 22. Licence / academic note
 

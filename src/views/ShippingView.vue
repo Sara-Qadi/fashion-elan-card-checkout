@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import CheckoutProgress from '@/components/CheckoutProgress.vue'
@@ -8,6 +8,7 @@ import ShippingForm from '@/components/ShippingForm.vue'
 import ShippingMethodSelector from '@/components/ShippingMethodSelector.vue'
 import { useSnackbar } from '@/composables/useSnackbar'
 import { useCheckoutStore } from '@/stores/checkout'
+import { validateShippingAddress } from '@/utils/validation'
 
 const router = useRouter()
 const checkout = useCheckoutStore()
@@ -16,23 +17,45 @@ const { error } = useSnackbar()
 const formRef = ref(null)
 const address = ref({ ...checkout.shippingAddress })
 
+/** Readable summary of what is blocking the shopper, shown above the form. */
+const blockingErrors = ref([])
+
 // Persist as the shopper types, so a refresh never loses progress.
 watch(address, (value) => checkout.setShippingDraft(value), { deep: true })
 
+// Hide the summary as soon as the shopper starts correcting things.
+watch(address, () => { blockingErrors.value = [] }, { deep: true })
+
+/** Brings the first offending field into view — it is often off-screen. */
+async function revealFirstError() {
+  await nextTick()
+  const field = document.querySelector('.v-input--error')
+  if (!field) return
+  field.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  field.querySelector('input, textarea')?.focus({ preventScroll: true })
+}
+
 async function continueToPayment() {
   const { valid } = await formRef.value.validate()
+  const check = validateShippingAddress(address.value)
 
-  if (!valid) {
-    error('Please fix the highlighted fields before continuing.')
-    document.querySelector('.v-input--error input, .v-input--error textarea')?.focus()
+  if (!valid || !check.valid) {
+    const messages = Object.values(check.errors)
+    blockingErrors.value = messages.length
+      ? messages
+      : ['Some details still need attention — check the highlighted fields below.']
+
+    error(
+      messages.length === 1
+        ? messages[0]
+        : `${messages.length || 'Some'} fields still need your attention.`,
+    )
+    revealFirstError()
     return
   }
 
-  const result = checkout.saveShippingAddress(address.value)
-  if (!result.valid) {
-    error('Some shipping details are still missing.')
-    return
-  }
+  blockingErrors.value = []
+  checkout.saveShippingAddress(address.value)
 
   // Reflect the trimmed values back into the form.
   address.value = { ...checkout.shippingAddress }
@@ -52,6 +75,20 @@ async function continueToPayment() {
     <v-row>
       <v-col cols="12" lg="7" xl="8">
         <v-form ref="formRef" validate-on="blur" @submit.prevent="continueToPayment">
+          <v-alert
+            v-if="blockingErrors.length"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+            icon="mdi-alert-circle-outline"
+            role="alert"
+          >
+            <p class="font-weight-medium mb-1">Please complete these before continuing</p>
+            <ul class="elan-error-list">
+              <li v-for="message in blockingErrors" :key="message">{{ message }}</li>
+            </ul>
+          </v-alert>
+
           <v-card class="elan-card pa-6 pa-sm-8">
             <ShippingForm v-model="address" />
           </v-card>
@@ -100,6 +137,13 @@ async function continueToPayment() {
 
 .elan-page__head {
   margin-bottom: 28px;
+}
+
+.elan-error-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .elan-actions {

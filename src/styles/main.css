@@ -1,0 +1,238 @@
+/**
+ * ELAN global styling layer.
+ * Keeps Vuetify recognisable but re-skinned: 16px cards, 12px inputs,
+ * 8px spacing rhythm, soft shadows and a calm editorial type scale.
+ */
+
+:root {
+  --elan-primary: #7b1e3a;
+  --elan-primary-dark: #5e1229;
+  --elan-primary-soft: #f7e9ec;
+  --elan-secondary: #c8a27a;
+  --elan-secondary-soft: #f6ede2;
+  --elan-background: #fff9f6;
+  --elan-surface: #ffffff;
+  --elan-text: #211a1d;
+  --elan-text-muted: #6f6267;
+  --elan-border: #ede0db;
+  --elan-error: #ba1a1a;
+
+  --elan-radius-card: 16px;
+  --elan-radius-input: 12px;
+  --elan-radius-thumb: 12px;
+
+  --elan-shadow-soft: 0 1px 2px rgba(33, 26, 29, 0.04), 0 6px 20px rgba(33, 26, 29, 0.05);
+  --elan-shadow-lifted: 0 2px 6px rgba(33, 26, 29, 0.06), 0 14px 34px rgba(33, 26, 29, 0.09);
+
+  --elan-space: 8px;
+}
+
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Nothing should ever push the page sideways. */
+.v-application,
+.v-main {
+  max-width: 100%;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* ---------- Type scale ---------- */
+
+.elan-display {
+  font-size: clamp(1.85rem, 1.2rem + 2.4vw, 2.75rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  color: var(--elan-text);
+}
+
+.elan-heading {
+  font-size: clamp(1.15rem, 1rem + 0.6vw, 1.35rem);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--elan-text);
+}
+
+.elan-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--elan-primary);
+}
+
+.elan-muted {
+  color: var(--elan-text-muted);
+}
+
+.elan-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Surfaces ----------
+ * Two cascade facts drive the `html ` prefix below:
+ *   1. vite-plugin-vuetify injects each component's CSS when its chunk loads,
+ *      which can be *after* this file — equal specificity would lose.
+ *   2. Vuetify teleports overlays (dialog, snackbar, select menu) to <body>,
+ *      outside `.v-application`, so that class is not a usable prefix.
+ * `html .x` is (0,1,1): it outranks Vuetify's (0,1,0) rules everywhere.
+ */
+
+html .v-card {
+  border-radius: var(--elan-radius-card);
+}
+
+/* VDialog ships its own higher-specificity radius rule for the dialog card. */
+html .v-dialog > .v-overlay__content > .v-card {
+  border-radius: var(--elan-radius-card);
+}
+
+html .elan-card {
+  border: 1px solid var(--elan-border);
+  background-color: var(--elan-surface);
+  /* Vuetify's .elevation-0 sets box-shadow with !important. */
+  box-shadow: var(--elan-shadow-soft) !important;
+}
+
+html .elan-card--flat {
+  border: 1px solid var(--elan-border);
+  box-shadow: none !important;
+}
+
+html .elan-panel {
+  border-radius: var(--elan-radius-card);
+  background-color: var(--elan-primary-soft);
+}
+
+/* ---------- Inputs ---------- */
+
+.v-field {
+  border-radius: var(--elan-radius-input) !important;
+}
+
+.v-field--variant-outlined .v-field__outline__start {
+  border-radius: var(--elan-radius-input) 0 0 var(--elan-radius-input) !important;
+}
+
+.v-field--variant-outlined .v-field__outline__end {
+  border-radius: 0 var(--elan-radius-input) var(--elan-radius-input) 0 !important;
+}
+
+.v-label {
+  opacity: 1;
+  color: var(--elan-text-muted);
+}
+
+.v-messages__message {
+  line-height: 1.35;
+  padding-top: 2px;
+}
+
+/* ---------- Buttons ---------- */
+
+html .v-btn {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+}
+
+html .elan-cta {
+  min-height: 52px;
+  font-size: 1rem;
+}
+
+/* ---------- Misc ---------- */
+
+html .elan-divider {
+  border-color: var(--elan-border);
+  opacity: 1;
+}
+
+/* Offset clears the promo strip (36px) + app bar (72px). */
+html .elan-sticky {
+  position: sticky;
+  top: 124px;
+}
+
+@media (max-width: 1279px) {
+  html .elan-sticky {
+    position: static;
+    top: auto;
+  }
+}
+
+.elan-link-button {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Focus visibility for keyboard users. */
+.v-btn:focus-visible,
+a:focus-visible,
+.elan-focusable:focus-visible {
+  outline: 2px solid var(--elan-primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Route transition ---------- */
+
+.elan-fade-enter-active,
+.elan-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+
+.elan-fade-enter-from,
+.elan-fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .elan-fade-enter-active,
+  .elan-fade-leave-active {
+    transition: none;
+  }
+}
+
+/* ---------- Print (order receipt) ---------- */
+
+@media print {
+  .elan-no-print,
+  .v-app-bar,
+  .v-snackbar,
+  footer {
+    display: none !important;
+  }
+
+  .v-main {
+    padding: 0 !important;
+  }
+
+  .v-application,
+  body {
+    background: #ffffff !important;
+  }
+
+  .elan-card,
+  .v-card {
+    box-shadow: none !important;
+    border: 1px solid #d8d8d8 !important;
+    break-inside: avoid;
+  }
+}

@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import CardPaymentForm from '@/components/CardPaymentForm.vue'
@@ -20,6 +20,14 @@ const cardFormRef = ref(null)
 // restored, so a returning shopper re-enters them.
 const method = ref(checkout.paymentMethod)
 const cardState = ref({ valid: false, summary: null })
+
+// Captured before CardPaymentForm mounts and clears the stored summary, so we
+// can explain why the card fields came back empty (after Edit, or a refresh).
+const hadSavedCard = ref(checkout.paymentMethod === 'card' && Boolean(checkout.safePaymentSummary))
+
+const showReEnterCardHint = computed(
+  () => hadSavedCard.value && method.value === 'card' && !cardState.value.valid,
+)
 
 watch(method, (value) => {
   if (value === 'cod') {
@@ -100,7 +108,21 @@ function reviewOrder() {
           <div v-if="method" class="elan-payment__details">
             <v-divider class="elan-divider my-6" />
 
-            <CardPaymentForm v-if="method === 'card'" ref="cardFormRef" @change="onCardChange" />
+            <template v-if="method === 'card'">
+              <v-alert
+                v-if="showReEnterCardHint"
+                type="info"
+                variant="tonal"
+                color="primary"
+                density="comfortable"
+                icon="mdi-shield-lock-outline"
+                class="mb-4"
+              >
+                Card details are never stored, so please enter them again to continue.
+              </v-alert>
+
+              <CardPaymentForm ref="cardFormRef" @change="onCardChange" />
+            </template>
 
             <div v-else class="elan-cod">
               <div class="elan-cod__icon" aria-hidden="true">

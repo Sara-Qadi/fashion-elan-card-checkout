@@ -32,6 +32,10 @@ function dispatch(eventName, detail, { cancelable = false } = {}) {
   const event = new CustomEvent(eventName, {
     detail: Object.freeze({ source: BRIDGE_SOURCE, ...detail }),
     bubbles: true,
+    // Team 1 agreed on bubbles + composed for every elan:* event. Composed is
+    // inert while we dispatch on window, but it is what lets these events escape
+    // a shadow root if this app is later wrapped as a Web Component.
+    composed: true,
     cancelable,
   })
 

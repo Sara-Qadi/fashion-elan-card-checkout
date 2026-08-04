@@ -32,11 +32,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      # `enablement: true` turns Pages on for the repository the first time this
-      # runs, so no manual step is needed in the repository settings.
+      # Pages is enabled on the repository with "GitHub Actions" as the source.
+      # `enablement: true` is deliberately not used here: creating the Pages site
+      # needs admin rights that GITHUB_TOKEN does not have, so it fails the job.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

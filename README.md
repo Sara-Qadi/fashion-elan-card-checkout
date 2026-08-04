@@ -358,49 +358,52 @@ Typography is Roboto; shadows are soft and low-contrast.
 - Semantic heading order, visible keyboard focus rings, and `prefers-reduced-motion` support
 - Feedback uses Vuetify alerts, inline messages, dialogs and snackbars — never `window.alert()`
 
-## 18. Deployment (Vercel)
+## 18. Deployment
 
-The repository already contains `vercel.json` with the SPA rewrite required for route refreshes:
+The app is a static SPA with no backend, so any static host works. Two are configured.
+
+### GitHub Pages (active)
+
+`.github/workflows/deploy.yml` builds and publishes on every push to `main` — no dashboard step is
+needed, because `actions/configure-pages` enables Pages on its first run.
+
+Pages serves the site from `/<repo>/` and has no rewrite rules, so two things adapt to it:
+
+- `vite.config.js` sets `base` to `/fashion-elan-card-checkout/` in production mode. The router
+  already reads `import.meta.env.BASE_URL`, so no route strings change.
+- `scripts/spa-fallback.mjs` copies `dist/index.html` to `dist/404.html` after every build. Pages
+  serves `404.html` for unmatched paths, which hands deep links such as `/checkout/payment` back
+  to Vue Router on a hard refresh.
+
+### Vercel / Netlify / a root domain
+
+`vercel.json` already carries the SPA rewrite:
 
 ```json
 { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
 ```
 
-### Option A — Vercel dashboard
-
-1. Push this repository to GitHub.
-2. Go to <https://vercel.com/new> and import `Sara-Qadi/fashion-elan-card-checkout`.
-3. Vercel auto-detects Vite. Confirm the settings:
-   - Framework preset: **Vite**
-   - Build command: `npm run build`
-   - Output directory: `dist`
-   - Install command: `npm install`
-4. Press **Deploy**. No environment variables are required.
-
-### Option B — Vercel CLI
+Build it for the domain root by overriding the base:
 
 ```bash
-npm install -g vercel
-vercel login
-vercel          # preview deployment
-vercel --prod   # production deployment
+VITE_BASE=/ npm run build
 ```
 
+On Vercel, set `VITE_BASE=/` under **Settings → Environment Variables**, keep the auto-detected
+Vite preset (`npm run build`, output `dist`), and deploy. The same override applies when the shell
+application eventually mounts this microfrontend at a different path.
+
 Notes:
-- `base` stays `'/'` in `vite.config.js` because the app is served from the domain root.
 - There are no secret environment variables and no backend dependency.
 - Product photography is loaded from `images.unsplash.com`; each image falls back to an on-brand
   placeholder tile if it fails to load.
 
 ## 19. Live deployed URL
 
-```
-TODO: paste the Vercel production URL here after deploying
-https://<your-project>.vercel.app
-```
+**<https://sara-qadi.github.io/fashion-elan-card-checkout/>**
 
-*Not yet deployed at the time of writing — deploy with the steps above and replace this
-placeholder.*
+Deployed from `main` by the GitHub Actions workflow above. Build status is visible under the
+repository's **Actions** tab.
 
 ## 20. Screenshots
 

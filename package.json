@@ -6,7 +6,7 @@
   "description": "ELAN — Cart & Checkout microfrontend (Vue 3 + Vuetify 3 + Vite)",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/spa-fallback.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -25,6 +25,7 @@ import App from '@/App.vue'
 import { ELAN_EVENTS } from '@/integration/checkoutBridge'
 import vuetify from '@/plugins/vuetify'
 import { createElementRouter, ROUTE_PATHS } from '@/router'
+import { useCartStore } from '@/stores/cart'
 import '@/styles/main.css'
 
 export const ELEMENT_TAG = 'elan-cart-app'
@@ -65,10 +66,11 @@ const ElanCartApp = defineCustomElement(
     },
 
     setup(props) {
-      // Installed by configureApp below, so this is the element's own router.
+      // Installed by configureApp below, so these are the element's own.
       const router = useRouter()
+      const cart = useCartStore()
       router.replace(normalizeRoute(props.route))
-      return { router }
+      return { router, cart }
     },
 
     watch: {
@@ -81,6 +83,10 @@ const ElanCartApp = defineCustomElement(
 
     mounted() {
       ensureIconFont()
+
+      // Publish the restored bag so the shell's badge is right before the
+      // shopper touches anything. The store's watch only fires on a change.
+      this.cart.announce()
 
       // Report internal navigation (Continue to Payment, Back to Cart, a guard
       // redirect) so the shell can keep the address bar in step.

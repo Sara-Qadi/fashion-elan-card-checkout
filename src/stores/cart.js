@@ -162,6 +162,23 @@ export const useCartStore = defineStore('cart', () => {
 
   /* ------------------------------------------------------- persistence */
 
+  /**
+   * Broadcasts the current bag without changing it.
+   *
+   * The watch below only fires on a change, so a shell that mounts this app
+   * with three items already restored from localStorage would show an empty
+   * bag badge until the shopper touched something. The element calls this once
+   * on mount to publish where the cart already is.
+   */
+  function announce() {
+    notifyCartUpdated({
+      itemCount: itemCount.value,
+      subtotal: subtotal.value,
+      grandTotal: merchandise.value.grandTotal,
+      currency: CURRENCY,
+    })
+  }
+
   watch(
     [items, promoCode, appliedDiscount],
     () => {
@@ -171,12 +188,7 @@ export const useCartStore = defineStore('cart', () => {
         discountRate: appliedDiscount.value,
       })
 
-      notifyCartUpdated({
-        itemCount: itemCount.value,
-        subtotal: subtotal.value,
-        grandTotal: merchandise.value.grandTotal,
-        currency: CURRENCY,
-      })
+      announce()
     },
     { deep: true },
   )
@@ -201,6 +213,7 @@ export const useCartStore = defineStore('cart', () => {
     decrementQuantity,
     removeItem,
     clearCart,
+    announce,
     resetDemoCart,
     applyPromoCode,
     removePromoCode,

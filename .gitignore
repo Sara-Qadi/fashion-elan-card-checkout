@@ -1,5 +1,6 @@
 node_modules
 dist
+dist-element
 dist-ssr
 *.local
 .vercel

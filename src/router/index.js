@@ -1,7 +1,15 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router'
 
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
+
+export const ROUTE_PATHS = Object.freeze([
+  '/cart',
+  '/checkout/shipping',
+  '/checkout/payment',
+  '/checkout/review',
+  '/order-confirmation',
+])
 
 const routes = [
   { path: '/', redirect: { name: 'cart' } },
@@ -51,38 +59,62 @@ const routes = [
   },
 ]
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
-  scrollBehavior(to, from, savedPosition) {
-    return savedPosition ?? { top: 0 }
-  },
-})
+/**
+ * Two histories, one set of routes.
+ *
+ * Standalone the app owns the address bar, so it uses web history. Inside the
+ * shell three microfrontends share one page, and three web histories would all
+ * grab `location` and fight over popstate. The custom element therefore runs on
+ * memory history: the shell pushes a path in, and the element reports where it
+ * navigated back out. Nothing else in the app has to know which mode it is in.
+ *
+ * `setTitle` is off in element mode for the same reason — the shell owns the tab.
+ */
+export function createAppRouter({ history, setTitle = true } = {}) {
+  const router = createRouter({
+    history: history ?? createWebHistory(import.meta.env.BASE_URL),
+    routes,
+    scrollBehavior(to, from, savedPosition) {
+      return savedPosition ?? { top: 0 }
+    },
+  })
+
+  /**
+   * Step guards. A shopper can never land on a checkout step whose prerequisites
+   * are missing — they are redirected to the earliest step that still needs work,
+   * with a `reason` query the target page turns into a readable message.
+   */
+  router.beforeEach((to) => {
+    const cart = useCartStore()
+    const checkout = useCheckoutStore()
+
+    if (to.meta.requiresCart && cart.isEmpty) {
+      return { name: 'cart', query: { reason: 'empty-cart' } }
+    }
+    if (to.meta.requiresShipping && !checkout.hasValidShipping) {
+      return { name: 'checkout-shipping', query: { reason: 'missing-shipping' } }
+    }
+    if (to.meta.requiresPayment && !checkout.hasValidPayment) {
+      return { name: 'checkout-payment', query: { reason: 'missing-payment' } }
+    }
+
+    return true
+  })
+
+  if (setTitle) {
+    router.afterEach((to) => {
+      document.title = to.meta?.title ? `${to.meta.title} · ELAN` : 'ELAN — Cart & Checkout'
+    })
+  }
+
+  return router
+}
 
 /**
- * Step guards. A shopper can never land on a checkout step whose prerequisites
- * are missing — they are redirected to the earliest step that still needs work,
- * with a `reason` query the target page turns into a readable message.
+ * No module-level router instance on purpose: creating one here would attach a
+ * web history (and its popstate listener) merely by importing this file, which
+ * is exactly what the element build must not do.
  */
-router.beforeEach((to) => {
-  const cart = useCartStore()
-  const checkout = useCheckoutStore()
-
-  if (to.meta.requiresCart && cart.isEmpty) {
-    return { name: 'cart', query: { reason: 'empty-cart' } }
-  }
-  if (to.meta.requiresShipping && !checkout.hasValidShipping) {
-    return { name: 'checkout-shipping', query: { reason: 'missing-shipping' } }
-  }
-  if (to.meta.requiresPayment && !checkout.hasValidPayment) {
-    return { name: 'checkout-payment', query: { reason: 'missing-payment' } }
-  }
-
-  return true
-})
-
-router.afterEach((to) => {
-  document.title = to.meta?.title ? `${to.meta.title} · ELAN` : 'ELAN — Cart & Checkout'
-})
-
-export default router
+export function createElementRouter() {
+  return createAppRouter({ history: createMemoryHistory(), setTitle: false })
+}

@@ -18,6 +18,10 @@ export const ELAN_EVENTS = Object.freeze({
   checkoutStarted: 'elan:checkout-started',
   orderCompleted: 'elan:order-completed',
   navigateCatalog: 'elan:navigate-catalog',
+  // Catalog and Account both already emit this, so it is the shared name for
+  // "take the user somewhere". navigateCatalog stays as the narrower request.
+  navigate: 'elan:navigate',
+  addToCart: 'elan:add-to-cart',
 })
 
 export const BRIDGE_SOURCE = 'elan-cart-checkout'

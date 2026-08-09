@@ -27,13 +27,32 @@ import {
 
 const emit = defineEmits(['change'])
 
+/**
+ * The name to put on the card by default — the shipping name, which by this
+ * point is either typed or filled from the shopper's account. It is only a
+ * starting value: cards are often in a different name, so it stays editable and
+ * is never re-applied once the field has been touched.
+ */
+const props = defineProps({
+  defaultName: { type: String, default: '' },
+})
+
 const formRef = ref(null)
-const cardName = ref('')
+const cardName = ref(props.defaultName)
 const cardNumber = ref('')
 const expiry = ref('')
 const cvv = ref('')
 
 const touched = ref({ cardName: false, cardNumber: false, expiry: false, cvv: false })
+
+// The shipping name can arrive after this form mounts — the account profile may
+// still have been loading. Adopt it only while the field is untouched and empty.
+watch(
+  () => props.defaultName,
+  (name) => {
+    if (!touched.value.cardName && !cardName.value.trim()) cardName.value = name
+  },
+)
 
 const brand = computed(() => detectCardBrand(cardNumber.value))
 const brandLabel = computed(() => CARD_BRANDS[brand.value]?.label ?? 'Card')

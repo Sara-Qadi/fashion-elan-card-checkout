@@ -121,7 +121,11 @@ function reviewOrder() {
                 Card details are never stored, so please enter them again to continue.
               </v-alert>
 
-              <CardPaymentForm ref="cardFormRef" @change="onCardChange" />
+              <CardPaymentForm
+                ref="cardFormRef"
+                :default-name="checkout.customerName"
+                @change="onCardChange"
+              />
             </template>
 
             <div v-else class="elan-cod">

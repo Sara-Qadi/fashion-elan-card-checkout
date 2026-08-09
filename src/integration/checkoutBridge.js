@@ -70,6 +70,51 @@ export function notifyOrderCompleted({ orderId, total = 0, itemCount = 0, curren
 }
 
 /**
+ * Translates an inbound `elan:add-to-cart` payload into a bag line.
+ *
+ * The Catalog app sends `productName`, `color` and `size`; the written contract
+ * says `name`, `selectedColor` and `selectedSize`. Both spellings are accepted
+ * rather than making a deployed app re-release over a field name — an inbound
+ * event from another team is exactly the place to be liberal about shape.
+ */
+export function toCartItem(detail) {
+  if (!detail || typeof detail !== 'object') return null
+
+  const name = detail.name ?? detail.productName
+  const productId = detail.productId ?? detail.id
+  if (!productId || typeof name !== 'string') return null
+
+  return {
+    productId: String(productId),
+    name,
+    price: Number(detail.price),
+    quantity: Number(detail.quantity) || 1,
+    color: detail.selectedColor ?? detail.color ?? '',
+    size: detail.selectedSize ?? detail.size ?? null,
+    image: detail.imageUrl ?? detail.image ?? '',
+    category: detail.category ?? '',
+  }
+}
+
+/**
+ * Listens for products added from another microfrontend. Returns an unsubscribe
+ * function. Events this app emitted itself are ignored, so a future shell that
+ * echoes the bus cannot double-add.
+ */
+export function onAddToCart(handler) {
+  if (!canDispatch()) return () => {}
+
+  const listener = (event) => {
+    if (event.detail?.source === BRIDGE_SOURCE) return
+    const item = toCartItem(event.detail)
+    if (item) handler(item, event.detail)
+  }
+
+  window.addEventListener(ELAN_EVENTS.addToCart, listener)
+  return () => window.removeEventListener(ELAN_EVENTS.addToCart, listener)
+}
+
+/**
  * Asks whoever is hosting us to take the shopper back to the catalog.
  *
  * Resolution order:

@@ -95,6 +95,38 @@ export const useCartStore = defineStore('cart', () => {
     return items.value.find((item) => item.id === id) ?? null
   }
 
+  /**
+   * One bag line per product/colour/size combination, so adding the same dress
+   * in M twice deepens a line instead of opening a second one.
+   */
+  function lineId({ productId, color, size }) {
+    return [productId, color || '-', size || '-'].join('::')
+  }
+
+  /**
+   * Adds a product chosen elsewhere — in practice the Catalog microfrontend,
+   * through `elan:add-to-cart`. Returns the resulting line, or null if the
+   * payload was not a usable product.
+   */
+  function addItem(raw) {
+    if (!raw || typeof raw !== 'object') return null
+
+    const productId = String(raw.productId ?? raw.id ?? '')
+    if (!productId) return null
+
+    const item = normalizeItem({ ...raw, productId, id: raw.id ?? lineId({ ...raw, productId }) })
+    if (!item) return null
+
+    const existing = findItem(item.id)
+    if (existing) {
+      existing.quantity = clampQuantity(existing.quantity + item.quantity)
+      return existing
+    }
+
+    items.value = [...items.value, item]
+    return item
+  }
+
   function updateQuantity(id, quantity) {
     const item = findItem(id)
     if (!item) return
@@ -208,6 +240,7 @@ export const useCartStore = defineStore('cart', () => {
     lineTotals,
 
     findItem,
+    addItem,
     updateQuantity,
     incrementQuantity,
     decrementQuantity,

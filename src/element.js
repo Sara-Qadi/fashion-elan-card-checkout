@@ -23,7 +23,7 @@ import { useRouter } from 'vue-router'
 
 import App from '@/App.vue'
 import { EMBEDDED } from '@/integration/embedded'
-import { ELAN_EVENTS } from '@/integration/checkoutBridge'
+import { ELAN_EVENTS, onAddToCart } from '@/integration/checkoutBridge'
 import vuetify from '@/plugins/vuetify'
 import { createElementRouter, ROUTE_PATHS } from '@/router'
 import { useCartStore } from '@/stores/cart'
@@ -89,6 +89,14 @@ const ElanCartApp = defineCustomElement(
       // shopper touches anything. The store's watch only fires on a change.
       this.cart.announce()
 
+      // The Catalog app announces a chosen product and expects the bag to pick
+      // it up. This is the one inbound event the cart acts on, and it is why
+      // the shell keeps this element mounted while the shopper is browsing:
+      // an unmounted cart would silently drop everything added to it.
+      this.stopListening = onAddToCart((item) => {
+        this.cart.addItem(item)
+      })
+
       // Report internal navigation (Continue to Payment, Back to Cart, a guard
       // redirect) so the shell can keep the address bar in step.
       this.router.afterEach((to) => {
@@ -100,6 +108,10 @@ const ElanCartApp = defineCustomElement(
           }),
         )
       })
+    },
+
+    unmounted() {
+      this.stopListening?.()
     },
 
     render: () => h(App),

@@ -20,6 +20,8 @@ const REDIRECT_MESSAGES = {
   'empty-cart': 'Your bag is empty — add something before checking out.',
   'missing-shipping': 'Please complete your shipping details first.',
   'missing-payment': 'Please choose a payment method first.',
+  'sign-in-required': 'Please sign in to check out — we will bring you straight back.',
+  'no-account-app': 'Checkout needs an account, and none is available here.',
 }
 
 watch(

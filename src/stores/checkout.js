@@ -122,6 +122,45 @@ export const useCheckoutStore = defineStore('checkout', () => {
     return validateShippingAddress(shippingAddress.value)
   }
 
+  /**
+   * Fills the shipping form from the signed-in customer's account details.
+   *
+   * Only ever fills blanks. Someone who has already typed a different name or
+   * is shipping to a friend's address must not have it overwritten because
+   * their profile finished loading a moment later — and this runs again on
+   * every profile update, so it has to be safe to repeat.
+   *
+   * Returns the fields it actually filled, so the UI can say so.
+   */
+  function prefillFromAccount(customer) {
+    if (!customer) return []
+
+    const candidates = {
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+      phone: customer.phone || customer.address?.phone,
+      country: customer.address?.country,
+      city: customer.address?.city,
+      street: customer.address?.street,
+      apartment: customer.address?.apartment,
+      postalCode: customer.address?.postalCode,
+    }
+
+    const filled = []
+    const next = { ...shippingAddress.value }
+
+    for (const [field, value] of Object.entries(candidates)) {
+      const incoming = String(value ?? '').trim()
+      if (!incoming || String(next[field] ?? '').trim()) continue
+      next[field] = incoming
+      filled.push(field)
+    }
+
+    if (filled.length) shippingAddress.value = next
+    return filled
+  }
+
   function selectShippingMethod(id) {
     shippingMethodId.value = getShippingMethod(id).id
   }
@@ -286,6 +325,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
 
     setShippingDraft,
     saveShippingAddress,
+    prefillFromAccount,
     selectShippingMethod,
     setPaymentMethod,
     clearPaymentSummary,

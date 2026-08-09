@@ -1,7 +1,9 @@
 import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router'
 
+import { requestSignIn } from '@/integration/checkoutBridge'
 import { useCartStore } from '@/stores/cart'
 import { useCheckoutStore } from '@/stores/checkout'
+import { useSessionStore } from '@/stores/session'
 
 export const ROUTE_PATHS = Object.freeze([
   '/cart',
@@ -23,13 +25,19 @@ const routes = [
     path: '/checkout/shipping',
     name: 'checkout-shipping',
     component: () => import('@/views/ShippingView.vue'),
-    meta: { title: 'Shipping', step: 1, requiresCart: true },
+    meta: { title: 'Shipping', step: 1, requiresCart: true, requiresAccount: true },
   },
   {
     path: '/checkout/payment',
     name: 'checkout-payment',
     component: () => import('@/views/PaymentView.vue'),
-    meta: { title: 'Payment', step: 2, requiresCart: true, requiresShipping: true },
+    meta: {
+      title: 'Payment',
+      step: 2,
+      requiresCart: true,
+      requiresAccount: true,
+      requiresShipping: true,
+    },
   },
   {
     path: '/checkout/review',
@@ -39,6 +47,7 @@ const routes = [
       title: 'Review Order',
       step: 3,
       requiresCart: true,
+      requiresAccount: true,
       requiresShipping: true,
       requiresPayment: true,
     },
@@ -70,7 +79,7 @@ const routes = [
  *
  * `setTitle` is off in element mode for the same reason — the shell owns the tab.
  */
-export function createAppRouter({ history, setTitle = true } = {}) {
+export function createAppRouter({ history, setTitle = true, requireAccount = false } = {}) {
   const router = createRouter({
     history: history ?? createWebHistory(import.meta.env.BASE_URL),
     routes,
@@ -90,6 +99,23 @@ export function createAppRouter({ history, setTitle = true } = {}) {
 
     if (to.meta.requiresCart && cart.isEmpty) {
       return { name: 'cart', query: { reason: 'empty-cart' } }
+    }
+
+    /*
+     * Checkout belongs to an account.
+     *
+     * Only enforced when there is an Account microfrontend to sign into —
+     * standalone, this app is the whole site and has no accounts at all, so
+     * gating there would just be a dead end. requestSignIn() asks the shell to
+     * route to the sign-in page and to bring the shopper back here afterwards.
+     */
+    if (requireAccount && to.meta.requiresAccount) {
+      const session = useSessionStore()
+
+      if (!session.isSignedIn) {
+        const handled = requestSignIn({ returnTo: to.fullPath })
+        return { name: 'cart', query: { reason: handled ? 'sign-in-required' : 'no-account-app' } }
+      }
     }
     if (to.meta.requiresShipping && !checkout.hasValidShipping) {
       return { name: 'checkout-shipping', query: { reason: 'missing-shipping' } }
@@ -116,5 +142,5 @@ export function createAppRouter({ history, setTitle = true } = {}) {
  * is exactly what the element build must not do.
  */
 export function createElementRouter() {
-  return createAppRouter({ history: createMemoryHistory(), setTitle: false })
+  return createAppRouter({ history: createMemoryHistory(), setTitle: false, requireAccount: true })
 }

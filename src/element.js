@@ -23,10 +23,12 @@ import { useRouter } from 'vue-router'
 
 import App from '@/App.vue'
 import { EMBEDDED } from '@/integration/embedded'
-import { ELAN_EVENTS, onAddToCart } from '@/integration/checkoutBridge'
+import { ELAN_EVENTS, onAddToCart, onIdentity } from '@/integration/checkoutBridge'
 import vuetify from '@/plugins/vuetify'
 import { createElementRouter, ROUTE_PATHS } from '@/router'
 import { useCartStore } from '@/stores/cart'
+import { useCheckoutStore } from '@/stores/checkout'
+import { useSessionStore } from '@/stores/session'
 import '@/styles/main.css'
 
 export const ELEMENT_TAG = 'elan-cart-app'
@@ -70,8 +72,10 @@ const ElanCartApp = defineCustomElement(
       // Installed by configureApp below, so these are the element's own.
       const router = useRouter()
       const cart = useCartStore()
+      const checkout = useCheckoutStore()
+      const session = useSessionStore()
       router.replace(normalizeRoute(props.route))
-      return { router, cart }
+      return { router, cart, checkout, session }
     },
 
     watch: {
@@ -89,13 +93,36 @@ const ElanCartApp = defineCustomElement(
       // shopper touches anything. The store's watch only fires on a change.
       this.cart.announce()
 
+      // A reload does not replay `elan:user-logged-in`, so the identity comes
+      // back from sessionStorage instead and the form is filled from it here.
+      this.applyPrefill()
+
       // The Catalog app announces a chosen product and expects the bag to pick
       // it up. This is the one inbound event the cart acts on, and it is why
       // the shell keeps this element mounted while the shopper is browsing:
       // an unmounted cart would silently drop everything added to it.
-      this.stopListening = onAddToCart((item) => {
+      const stopAddToCart = onAddToCart((item) => {
         this.cart.addItem(item)
       })
+
+      // Who is signed in, so a shopper with an account is not asked to type
+      // their name, email and address into checkout all over again.
+      const stopIdentity = onIdentity({
+        signedIn: (user) => {
+          this.session.signIn(user)
+          this.applyPrefill()
+        },
+        profile: (profile) => {
+          this.session.applyProfile(profile)
+          this.applyPrefill()
+        },
+        signedOut: () => this.session.signOut(),
+      })
+
+      this.stopListening = () => {
+        stopAddToCart()
+        stopIdentity()
+      }
 
       // Report internal navigation (Continue to Payment, Back to Cart, a guard
       // redirect) so the shell can keep the address bar in step.
@@ -108,6 +135,13 @@ const ElanCartApp = defineCustomElement(
           }),
         )
       })
+    },
+
+    methods: {
+      /** Fills blank shipping fields from the account. Safe to call repeatedly. */
+      applyPrefill() {
+        this.checkout.prefillFromAccount(this.session.customer)
+      },
     },
 
     unmounted() {

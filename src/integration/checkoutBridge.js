@@ -22,6 +22,15 @@ export const ELAN_EVENTS = Object.freeze({
   // "take the user somewhere". navigateCatalog stays as the narrower request.
   navigate: 'elan:navigate',
   addToCart: 'elan:add-to-cart',
+
+  // Inbound, all owned by the Account microfrontend.
+  userLoggedIn: 'elan:user-logged-in',
+  userRegistered: 'elan:user-registered',
+  userLoggedOut: 'elan:user-logged-out',
+  profileUpdated: 'elan:profile-updated',
+
+  // Outbound: "this shopper needs an account before I can continue".
+  signInRequired: 'elan:sign-in-required',
 })
 
 export const BRIDGE_SOURCE = 'elan-cart-checkout'
@@ -112,6 +121,46 @@ export function onAddToCart(handler) {
 
   window.addEventListener(ELAN_EVENTS.addToCart, listener)
   return () => window.removeEventListener(ELAN_EVENTS.addToCart, listener)
+}
+
+/**
+ * Subscribes to everything the Account microfrontend says about who is signed
+ * in. Returns one unsubscribe function for the lot.
+ *
+ * Nothing here is requested — these events are broadcast whether or not this
+ * app is listening, and every field comes from the Account app's own contract.
+ * This app never emits any of it back.
+ */
+export function onIdentity({ signedIn, signedOut, profile } = {}) {
+  if (!canDispatch()) return () => {}
+
+  const subscriptions = [
+    [ELAN_EVENTS.userLoggedIn, (event) => signedIn?.(event.detail?.user)],
+    [ELAN_EVENTS.userRegistered, (event) => signedIn?.(event.detail?.user)],
+    [ELAN_EVENTS.userLoggedOut, () => signedOut?.()],
+    [ELAN_EVENTS.profileUpdated, (event) => profile?.(event.detail?.profile)],
+  ]
+
+  for (const [name, handler] of subscriptions) window.addEventListener(name, handler)
+
+  return () => {
+    for (const [name, handler] of subscriptions) window.removeEventListener(name, handler)
+  }
+}
+
+/**
+ * Says the shopper has to be signed in before checkout can continue, and where
+ * to send them back to once they are.
+ *
+ * The shell answers this: it routes to the Account app's sign-in page and
+ * remembers `returnTo`. Deliberately not an `elan:navigate` — that event means
+ * "I have moved", and this is a request, which is a different thing and needs
+ * to survive being asked by an app that is not currently on screen.
+ *
+ * Returns false when a shell handled it, matching requestCatalogNavigation.
+ */
+export function requestSignIn({ returnTo, reason = 'checkout' } = {}) {
+  return !dispatch(ELAN_EVENTS.signInRequired, { returnTo, reason }, { cancelable: true })
 }
 
 /**

@@ -109,6 +109,13 @@ const ElanCartApp = defineCustomElement(
       // their name, email and address into checkout all over again.
       const stopIdentity = onIdentity({
         signedIn: (user) => {
+          // A different person than the form was filled for. Their predecessor's
+          // name and email must come out first, or prefill will treat those
+          // fields as already answered and quietly decline to update them.
+          if (user?.id && this.session.customer?.id !== String(user.id)) {
+            this.checkout.clearAccountPrefill()
+          }
+
           this.session.signIn(user)
           this.applyPrefill()
         },
@@ -116,7 +123,10 @@ const ElanCartApp = defineCustomElement(
           this.session.applyProfile(profile)
           this.applyPrefill()
         },
-        signedOut: () => this.session.signOut(),
+        signedOut: () => {
+          this.session.signOut()
+          this.checkout.clearAccountPrefill()
+        },
       })
 
       this.stopListening = () => {

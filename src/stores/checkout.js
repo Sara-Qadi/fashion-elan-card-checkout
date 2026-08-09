@@ -30,6 +30,7 @@ function loadCheckoutState() {
     shippingMethodId: DEFAULT_SHIPPING_METHOD_ID,
     paymentMethod: null,
     safePaymentSummary: null,
+    accountFields: [],
   }
 
   if (!stored || typeof stored !== 'object') return fallback
@@ -42,6 +43,7 @@ function loadCheckoutState() {
     paymentMethod,
     // Never trust a persisted summary that carries more than brand + last4.
     safePaymentSummary: paymentMethod ? sanitizePaymentSummary(stored.safePaymentSummary) : null,
+    accountFields: Array.isArray(stored.accountFields) ? stored.accountFields.map(String) : [],
   }
 }
 
@@ -74,6 +76,17 @@ export const useCheckoutStore = defineStore('checkout', () => {
   const paymentMethod = ref(persisted.paymentMethod)
   const safePaymentSummary = ref(persisted.safePaymentSummary)
   const orderConfirmation = ref(loadLastOrder())
+
+  /**
+   * Which shipping fields were filled from the account rather than typed.
+   *
+   * Tracked so they can be taken back out again. Prefill only ever fills
+   * blanks, which is right while one person is shopping and wrong the moment a
+   * different one signs in: without this, the previous customer's name and
+   * email sit in the form as "already filled" and the new customer's details
+   * are politely declined.
+   */
+  const accountFields = ref(persisted.accountFields)
   const isPlacingOrder = ref(false)
 
   /* ----------------------------------------------------------- getters */
@@ -157,8 +170,28 @@ export const useCheckoutStore = defineStore('checkout', () => {
       filled.push(field)
     }
 
-    if (filled.length) shippingAddress.value = next
+    if (filled.length) {
+      shippingAddress.value = next
+      accountFields.value = [...new Set([...accountFields.value, ...filled])]
+    }
+
     return filled
+  }
+
+  /**
+   * Removes what the account filled in, leaving anything typed by hand.
+   *
+   * Called when the customer changes or signs out, so one person's details
+   * never linger in the next person's checkout.
+   */
+  function clearAccountPrefill() {
+    if (!accountFields.value.length) return
+
+    const next = { ...shippingAddress.value }
+    for (const field of accountFields.value) next[field] = ''
+
+    shippingAddress.value = next
+    accountFields.value = []
   }
 
   function selectShippingMethod(id) {
@@ -292,13 +325,14 @@ export const useCheckoutStore = defineStore('checkout', () => {
   /* ------------------------------------------------------- persistence */
 
   watch(
-    [shippingAddress, shippingMethodId, paymentMethod, safePaymentSummary],
+    [shippingAddress, shippingMethodId, paymentMethod, safePaymentSummary, accountFields],
     () => {
       writeJSON(STORAGE_KEYS.checkout, {
         shippingAddress: shippingAddress.value,
         shippingMethodId: shippingMethodId.value,
         paymentMethod: paymentMethod.value,
         safePaymentSummary: safePaymentSummary.value,
+        accountFields: accountFields.value,
       })
     },
     { deep: true },
@@ -326,6 +360,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
     setShippingDraft,
     saveShippingAddress,
     prefillFromAccount,
+    clearAccountPrefill,
     selectShippingMethod,
     setPaymentMethod,
     clearPaymentSummary,

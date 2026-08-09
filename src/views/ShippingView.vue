@@ -23,6 +23,31 @@ const blockingErrors = ref([])
 // Persist as the shopper types, so a refresh never loses progress.
 watch(address, (value) => checkout.setShippingDraft(value), { deep: true })
 
+/*
+ * The line above makes this view the source of truth the moment it mounts, and
+ * `address` is a one-time copy — so anything written to the store afterwards is
+ * not just ignored, it is overwritten on the next keystroke.
+ *
+ * That is exactly what happens with account prefill. Signing in fills the store
+ * from the customer's account, and whether that lands before or after this view
+ * mounts is a race nobody should have to think about: sign in from the checkout
+ * gate and it arrives first, sign in from anywhere else and it arrives second.
+ *
+ * So accept late arrivals, but only into fields the shopper has left blank —
+ * never overwrite something they typed.
+ */
+watch(
+  () => checkout.shippingAddress,
+  (incoming) => {
+    for (const [field, value] of Object.entries(incoming)) {
+      if (!String(value ?? '').trim()) continue
+      if (String(address.value[field] ?? '').trim()) continue
+      address.value[field] = value
+    }
+  },
+  { deep: true },
+)
+
 // Hide the summary as soon as the shopper starts correcting things.
 watch(address, () => { blockingErrors.value = [] }, { deep: true })
 

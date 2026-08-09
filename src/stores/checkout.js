@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 import { useCartStore } from '@/stores/cart'
 import { notifyCheckoutStarted, notifyOrderCompleted } from '@/integration/checkoutBridge'
+import { publishSharedOrder } from '@/integration/sharedOrders'
 import { CURRENCY } from '@/utils/currency'
 import {
   DEFAULT_SHIPPING_METHOD_ID,
@@ -212,6 +213,10 @@ export const useCheckoutStore = defineStore('checkout', () => {
 
       orderConfirmation.value = order
       writeJSON(STORAGE_KEYS.lastOrder, order)
+
+      // Before the event, not after: Account looks the order up in the shared
+      // store the moment it hears about it, and drops anything it cannot find.
+      publishSharedOrder(order)
 
       notifyOrderCompleted({
         orderId: order.id,

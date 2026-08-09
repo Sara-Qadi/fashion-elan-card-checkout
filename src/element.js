@@ -22,6 +22,7 @@ import { defineCustomElement, h } from 'vue'
 import { useRouter } from 'vue-router'
 
 import App from '@/App.vue'
+import { EMBEDDED } from '@/integration/embedded'
 import { ELAN_EVENTS } from '@/integration/checkoutBridge'
 import vuetify from '@/plugins/vuetify'
 import { createElementRouter, ROUTE_PATHS } from '@/router'
@@ -114,6 +115,12 @@ const ElanCartApp = defineCustomElement(
       app.use(createPinia())
       app.use(createElementRouter())
       app.use(vuetify)
+
+      // Inside a shell there is already a header and a footer on the page, and
+      // a second set of them is the most obvious way a composed page gives away
+      // that it is three apps in a trench coat. The standalone build leaves this
+      // undefined and keeps rendering its own chrome.
+      app.provide(EMBEDDED, true)
     },
   },
 )
